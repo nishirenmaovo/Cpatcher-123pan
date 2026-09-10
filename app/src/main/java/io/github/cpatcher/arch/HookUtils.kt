@@ -23,12 +23,18 @@ fun Class<*>.hookAfter(
     vararg parameterTypes: Any,
     callback: (XC_MethodHook.MethodHookParam) -> Unit
 ) {
-    val args = mutableListOf<Any?>()
-    args.addAll(parameterTypes)
-    args.add(object : XC_MethodHook() {
-        override fun afterHookedMethod(param: MethodHookParam) { callback(param) }
-    })
-    XposedHelpers.findAndHookMethod(this, methodName, *args.toTypedArray())
+    try {
+        val args = mutableListOf<Any?>()
+        args.addAll(parameterTypes)
+        args.add(object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                try { callback(param) } catch (_: Throwable) { }
+            }
+        })
+        XposedHelpers.findAndHookMethod(this, methodName, *args.toTypedArray())
+    } catch (t: Throwable) {
+        Log.e("Cpatcher", "hookAfter failed: ${this.name}.$methodName - ${t.message}")
+    }
 }
 
 fun Class<*>.hookBefore(
@@ -36,12 +42,18 @@ fun Class<*>.hookBefore(
     vararg parameterTypes: Any,
     callback: (XC_MethodHook.MethodHookParam) -> Unit
 ) {
-    val args = mutableListOf<Any?>()
-    args.addAll(parameterTypes)
-    args.add(object : XC_MethodHook() {
-        override fun beforeHookedMethod(param: MethodHookParam) { callback(param) }
-    })
-    XposedHelpers.findAndHookMethod(this, methodName, *args.toTypedArray())
+    try {
+        val args = mutableListOf<Any?>()
+        args.addAll(parameterTypes)
+        args.add(object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                try { callback(param) } catch (_: Throwable) { }
+            }
+        })
+        XposedHelpers.findAndHookMethod(this, methodName, *args.toTypedArray())
+    } catch (t: Throwable) {
+        Log.e("Cpatcher", "hookBefore failed: ${this.name}.$methodName - ${t.message}")
+    }
 }
 
 fun hookAfter(
