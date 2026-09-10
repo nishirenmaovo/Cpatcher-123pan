@@ -53,41 +53,23 @@ class XingtuHandler : IHook() {
 
     private fun buildObfsTable(bridge: DexKitBridge): Map<String, Any> {
         val table = mutableMapOf<String, Any>()
-        val userInfoClass = bridge.findClass {
-            matcher { usingStrings("vipLevel", "isVip", "vipExpire", "memberLevel", "isSvip"); modifiers = Modifier.PUBLIC }
-        }.firstOrNull()
+        val userInfoClass = bridge.findClass { matcher { usingStrings("vipLevel", "isVip", "vipExpire", "memberLevel", "isSvip"); modifiers = Modifier.PUBLIC } }.firstOrNull()
         if (userInfoClass != null) table[KEY_USER_INFO_MODEL] = userInfoClass.name
-        val isVipMethod = bridge.findMethod {
-            matcher { usingStrings("isVip", "isMember", "isSvip", "vip"); returnType = "boolean"; modifiers = Modifier.PUBLIC }
-        }.firstOrNull()
+        val isVipMethod = bridge.findMethod { matcher { usingStrings("isVip", "isMember", "isSvip", "vip"); returnType = "boolean"; modifiers = Modifier.PUBLIC } }.firstOrNull()
         if (isVipMethod != null) table[KEY_IS_VIP_METHOD] = isVipMethod.toObfsInfo()
-        val vipLevelMethod = bridge.findMethod {
-            matcher { usingStrings("vipLevel", "getVipLevel", "memberLevel", "getMemberLevel"); returnType = "int"; modifiers = Modifier.PUBLIC }
-        }.firstOrNull()
+        val vipLevelMethod = bridge.findMethod { matcher { usingStrings("vipLevel", "getVipLevel", "memberLevel", "getMemberLevel"); returnType = "int"; modifiers = Modifier.PUBLIC } }.firstOrNull()
         if (vipLevelMethod != null) table[KEY_VIP_LEVEL_METHOD] = vipLevelMethod.toObfsInfo()
-        val vipDialogMethod = bridge.findMethod {
-            matcher { usingStrings("vip_dialog", "member_pay", "open_vip", "upgrade_vip", "vip_pay"); returnType = "void" }
-        }.firstOrNull()
+        val vipDialogMethod = bridge.findMethod { matcher { usingStrings("vip_dialog", "member_pay", "open_vip", "upgrade_vip", "vip_pay"); returnType = "void" } }.firstOrNull()
         if (vipDialogMethod != null) table[KEY_VIP_DIALOG_SHOW] = vipDialogMethod.toObfsInfo()
-        val payMethod = bridge.findMethod {
-            matcher { usingStrings("pay", "purchase", "recharge", "alipay", "wxpay", "iap"); returnType = "void"; modifiers = Modifier.PUBLIC or Modifier.STATIC }
-        }.firstOrNull()
+        val payMethod = bridge.findMethod { matcher { usingStrings("pay", "purchase", "recharge", "alipay", "wxpay", "iap"); returnType = "void"; modifiers = Modifier.PUBLIC or Modifier.STATIC } }.firstOrNull()
         if (payMethod != null) table[KEY_PAY_LAUNCH_METHOD] = payMethod.toObfsInfo()
-        val materialCheckMethod = bridge.findMethod {
-            matcher { usingStrings("isVipMaterial", "materialVip", "isLock", "materialLock", "needVip"); returnType = "boolean" }
-        }.firstOrNull()
+        val materialCheckMethod = bridge.findMethod { matcher { usingStrings("isVipMaterial", "materialVip", "isLock", "materialLock", "needVip"); returnType = "boolean" } }.firstOrNull()
         if (materialCheckMethod != null) table[KEY_MATERIAL_VIP_CHECK] = materialCheckMethod.toObfsInfo()
-        val filterCheckMethod = bridge.findMethod {
-            matcher { usingStrings("isVipFilter", "filterVip", "filterLock", "isFilterVip"); returnType = "boolean" }
-        }.firstOrNull()
+        val filterCheckMethod = bridge.findMethod { matcher { usingStrings("isVipFilter", "filterVip", "filterLock", "isFilterVip"); returnType = "boolean" } }.firstOrNull()
         if (filterCheckMethod != null) table[KEY_FILTER_VIP_CHECK] = filterCheckMethod.toObfsInfo()
-        val watermarkMethod = bridge.findMethod {
-            matcher { usingStrings("watermark", "addWatermark", "showWatermark", "hasWatermark"); returnType = "boolean" }
-        }.firstOrNull()
+        val watermarkMethod = bridge.findMethod { matcher { usingStrings("watermark", "addWatermark", "showWatermark", "hasWatermark"); returnType = "boolean" } }.firstOrNull()
         if (watermarkMethod != null) table[KEY_EXPORT_WATERMARK_CHECK] = watermarkMethod.toObfsInfo()
-        val exportVipMethod = bridge.findMethod {
-            matcher { usingStrings("exportVip", "saveVip", "hdExport", "highQualityExport"); returnType = "boolean" }
-        }.firstOrNull()
+        val exportVipMethod = bridge.findMethod { matcher { usingStrings("exportVip", "saveVip", "hdExport", "highQualityExport"); returnType = "boolean" } }.firstOrNull()
         if (exportVipMethod != null) table[KEY_EXPORT_VIP_CHECK] = exportVipMethod.toObfsInfo()
         logI("${this::class.simpleName}: Fingerprint table built with ${table.size} entries")
         return table
@@ -192,7 +174,7 @@ class XingtuHandler : IHook() {
                 catch (_: Exception) { }
             }
         }
-        findClass("android.app.Activity").hookAfter("onCreate") { param ->
+        findClass("android.app.Activity").hookAfter("onCreate", "android.os.Bundle") { param ->
             val activity = param.thisObject as Activity
             val cn = activity.javaClass.name.lowercase()
             if ((cn.contains("vip") || cn.contains("member") || cn.contains("pay")) && (cn.contains("dialog") || cn.contains("activity") || cn.contains("popup"))) {

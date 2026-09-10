@@ -57,11 +57,7 @@ class Cloud123Handler : IHook() {
         }.firstOrNull()
         if (splashActivity != null) table[KEY_SPLASH_AD_ACTIVITY] = splashActivity.name
         val splashShowMethod = bridge.findMethod {
-            matcher {
-                usingStrings("ad_show", "splash_ad", "count_down")
-                returnType = "void"
-                modifiers = Modifier.PUBLIC
-            }
+            matcher { usingStrings("ad_show", "splash_ad", "count_down"); returnType = "void"; modifiers = Modifier.PUBLIC }
         }.firstOrNull()
         if (splashShowMethod != null) table[KEY_SPLASH_AD_SHOW] = splashShowMethod.toObfsInfo()
         val adContainerClass = bridge.findClass {
@@ -69,41 +65,23 @@ class Cloud123Handler : IHook() {
         }.firstOrNull()
         if (adContainerClass != null) table[KEY_AD_VIEW_CONTAINER] = adContainerClass.name
         val adLoadMethod = bridge.findMethod {
-            matcher {
-                usingStrings("loadAd", "ad_load", "request_ad")
-                returnType = "void"
-                paramTypes("android.content.Context")
-            }
+            matcher { usingStrings("loadAd", "ad_load", "request_ad"); returnType = "void"; paramTypes("android.content.Context") }
         }.firstOrNull()
         if (adLoadMethod != null) table[KEY_AD_LOAD_METHOD] = adLoadMethod.toObfsInfo()
         val userInfoClass = bridge.findClass {
-            matcher {
-                usingStrings("vipLevel", "isVip", "vipExpire", "memberLevel")
-                modifiers = Modifier.PUBLIC
-            }
+            matcher { usingStrings("vipLevel", "isVip", "vipExpire", "memberLevel"); modifiers = Modifier.PUBLIC }
         }.firstOrNull()
         if (userInfoClass != null) table[KEY_USER_INFO_MODEL] = userInfoClass.name
         val isVipMethod = bridge.findMethod {
-            matcher {
-                usingStrings("isVip", "isMember", "isSvip", "vip")
-                returnType = "boolean"
-                modifiers = Modifier.PUBLIC
-            }
+            matcher { usingStrings("isVip", "isMember", "isSvip", "vip"); returnType = "boolean"; modifiers = Modifier.PUBLIC }
         }.firstOrNull()
         if (isVipMethod != null) table[KEY_IS_VIP_METHOD] = isVipMethod.toObfsInfo()
         val vipDialogMethod = bridge.findMethod {
-            matcher {
-                usingStrings("vip_dialog", "member_pay", "open_vip", "upgrade")
-                returnType = "void"
-            }
+            matcher { usingStrings("vip_dialog", "member_pay", "open_vip", "upgrade"); returnType = "void" }
         }.firstOrNull()
         if (vipDialogMethod != null) table[KEY_VIP_DIALOG_SHOW] = vipDialogMethod.toObfsInfo()
         val payMethod = bridge.findMethod {
-            matcher {
-                usingStrings("pay", "purchase", "recharge", "alipay", "wxpay")
-                returnType = "void"
-                modifiers = Modifier.PUBLIC or Modifier.STATIC
-            }
+            matcher { usingStrings("pay", "purchase", "recharge", "alipay", "wxpay"); returnType = "void"; modifiers = Modifier.PUBLIC or Modifier.STATIC }
         }.firstOrNull()
         if (payMethod != null) table[KEY_PAY_LAUNCH_METHOD] = payMethod.toObfsInfo()
         logI("${this::class.simpleName}: Fingerprint table built with ${table.size} entries")
@@ -113,7 +91,7 @@ class Cloud123Handler : IHook() {
     private fun applyRemoveAdsHooks(obfsTable: Map<String, Any>) {
         var hookCount = 0
         obfsTable[KEY_SPLASH_AD_ACTIVITY]?.let { className ->
-            findClass(className as String).hookAfter("onCreate") { param ->
+            findClass(className as String).hookAfter("onCreate", "android.os.Bundle") { param ->
                 (param.thisObject as Activity).finish()
                 logI("${this::class.simpleName}: Splash ad activity finished")
             }
@@ -121,29 +99,21 @@ class Cloud123Handler : IHook() {
         }
         obfsTable[KEY_SPLASH_AD_SHOW]?.let { info ->
             val mi = info as ObfsMethodInfo
-            findClass(mi.className).hookBefore(mi.memberName) { param ->
-                param.result = null
-                logI("${this::class.simpleName}: Splash ad show blocked")
-            }
+            findClass(mi.className).hookBefore(mi.memberName) { param -> param.result = null; logI("${this::class.simpleName}: Splash ad show blocked") }
             hookCount++
         }
         obfsTable[KEY_AD_VIEW_CONTAINER]?.let { className ->
             findClass(className as String).hookAfter("onAttachedToWindow") { param ->
                 val view = param.thisObject as View
                 view.visibility = View.GONE
-                (view.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-                    it.width = 0; it.height = 0; view.layoutParams = it
-                }
+                (view.layoutParams as? ViewGroup.MarginLayoutParams)?.let { it.width = 0; it.height = 0; view.layoutParams = it }
                 logI("${this::class.simpleName}: Ad container hidden")
             }
             hookCount++
         }
         obfsTable[KEY_AD_LOAD_METHOD]?.let { info ->
             val mi = info as ObfsMethodInfo
-            findClass(mi.className).hookBefore(mi.memberName) { param ->
-                param.result = null
-                logI("${this::class.simpleName}: Ad load blocked")
-            }
+            findClass(mi.className).hookBefore(mi.memberName) { param -> param.result = null; logI("${this::class.simpleName}: Ad load blocked") }
             hookCount++
         }
         blockCommonAdSdks()
@@ -152,15 +122,10 @@ class Cloud123Handler : IHook() {
 
     private fun blockCommonAdSdks() {
         val adSdks = listOf(
-            "com.bytedance.sdk.openadsdk.TTAdNative",
-            "com.bytedance.sdk.openadsdk.TTAdSdk",
-            "com.qq.e.ads.nativ.NativeAD",
-            "com.qq.e.ads.banner2.UnifiedBannerAD",
-            "com.qq.e.ads.splash.SplashAD",
-            "com.baidu.mobads.SplashAd",
-            "com.baidu.mobads.BaiduNativeManager",
-            "com.kwad.sdk.api.KsAdSDK",
-            "com.kwad.sdk.api.KsSplashScreenAd",
+            "com.bytedance.sdk.openadsdk.TTAdNative", "com.bytedance.sdk.openadsdk.TTAdSdk",
+            "com.qq.e.ads.nativ.NativeAD", "com.qq.e.ads.banner2.UnifiedBannerAD", "com.qq.e.ads.splash.SplashAD",
+            "com.baidu.mobads.SplashAd", "com.baidu.mobads.BaiduNativeManager",
+            "com.kwad.sdk.api.KsAdSDK", "com.kwad.sdk.api.KsSplashScreenAd",
         )
         adSdks.forEach { className ->
             try { findClass(className).hookBefore("loadAd") { param -> param.result = null } }
@@ -172,10 +137,7 @@ class Cloud123Handler : IHook() {
         var hookCount = 0
         obfsTable[KEY_IS_VIP_METHOD]?.let { info ->
             val mi = info as ObfsMethodInfo
-            findClass(mi.className).hookAfter(mi.memberName) { param ->
-                param.result = true
-                logI("${this::class.simpleName}: isVip() forced to true")
-            }
+            findClass(mi.className).hookAfter(mi.memberName) { param -> param.result = true; logI("${this::class.simpleName}: isVip() forced to true") }
             hookCount++
         }
         obfsTable[KEY_USER_INFO_MODEL]?.let { className ->
@@ -190,18 +152,12 @@ class Cloud123Handler : IHook() {
         }
         obfsTable[KEY_VIP_DIALOG_SHOW]?.let { info ->
             val mi = info as ObfsMethodInfo
-            findClass(mi.className).hookBefore(mi.memberName) { param ->
-                param.result = null
-                logI("${this::class.simpleName}: VIP payment dialog blocked")
-            }
+            findClass(mi.className).hookBefore(mi.memberName) { param -> param.result = null; logI("${this::class.simpleName}: VIP payment dialog blocked") }
             hookCount++
         }
         obfsTable[KEY_PAY_LAUNCH_METHOD]?.let { info ->
             val mi = info as ObfsMethodInfo
-            findClass(mi.className).hookBefore(mi.memberName) { param ->
-                param.result = null
-                logI("${this::class.simpleName}: Payment launch blocked")
-            }
+            findClass(mi.className).hookBefore(mi.memberName) { param -> param.result = null; logI("${this::class.simpleName}: Payment launch blocked") }
             hookCount++
         }
         applyGenericVipHooks()
@@ -219,14 +175,8 @@ class Cloud123Handler : IHook() {
                     when (field.type) {
                         Boolean::class.java -> field.setBoolean(userInfo, true)
                         Int::class.java -> field.setInt(userInfo, if (fieldName.contains("level")) 2 else 1)
-                        Long::class.java -> {
-                            if (fieldName.contains("expire") || fieldName.contains("time"))
-                                field.setLong(userInfo, System.currentTimeMillis() + 315360000000L)
-                        }
-                        String::class.java -> {
-                            if (fieldName.contains("level")) field.set(userInfo, "svip")
-                            else if (fieldName.contains("expire")) field.set(userInfo, "2099-12-31")
-                        }
+                        Long::class.java -> { if (fieldName.contains("expire") || fieldName.contains("time")) field.setLong(userInfo, System.currentTimeMillis() + 315360000000L) }
+                        String::class.java -> { if (fieldName.contains("level")) field.set(userInfo, "svip") else if (fieldName.contains("expire")) field.set(userInfo, "2099-12-31") }
                     }
                 } catch (_: Exception) { }
             }
@@ -235,12 +185,7 @@ class Cloud123Handler : IHook() {
 
     private fun applyGenericVipHooks() {
         val methods = listOf("isVip", "isMember", "isSvip", "isPremium", "isPayUser", "hasVip")
-        val packages = listOf(
-            "com.mfcloudcalculate.networkdisk.user",
-            "com.mfcloudcalculate.networkdisk.mine",
-            "com.mfcloudcalculate.networkdisk.bean",
-            "com.mfcloudcalculate.networkdisk.model",
-        )
+        val packages = listOf("com.mfcloudcalculate.networkdisk.user", "com.mfcloudcalculate.networkdisk.mine", "com.mfcloudcalculate.networkdisk.bean", "com.mfcloudcalculate.networkdisk.model")
         methods.forEach { methodName ->
             packages.forEach { pkg ->
                 try { findClass("$pkg.UserInfo").hookAfter(methodName) { param -> param.result = true } }
@@ -251,7 +196,7 @@ class Cloud123Handler : IHook() {
 
     private fun applyFallbackHooks() {
         logI("${this::class.simpleName}: Using fallback hook strategy")
-        findClass("android.app.Activity").hookAfter("onCreate") { param ->
+        findClass("android.app.Activity").hookAfter("onCreate", "android.os.Bundle") { param ->
             val activity = param.thisObject as Activity
             val cn = activity.javaClass.name.lowercase()
             if (cn.contains("splash") && cn.contains("ad")) {
