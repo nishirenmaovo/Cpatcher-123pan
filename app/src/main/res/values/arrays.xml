@@ -2,5 +2,6 @@
 <resources>
     <string-array name="xposed_scope">
         <item>com.mfcloudcalculate.networkdisk</item>
+        <item>com.xt.retouch</item>
     </string-array>
 </resources>

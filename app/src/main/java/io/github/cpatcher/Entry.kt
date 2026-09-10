@@ -6,12 +6,14 @@ import io.github.cpatcher.arch.IHook
 import io.github.cpatcher.arch.logE
 import io.github.cpatcher.arch.logI
 import io.github.cpatcher.handlers.Cloud123Handler
+import io.github.cpatcher.handlers.XingtuHandler
 
 class Entry : IXposedHookLoadPackage {
 
     companion object {
         private val HANDLER_REGISTRY: Map<String, () -> IHook> = mapOf(
             "com.mfcloudcalculate.networkdisk" to { Cloud123Handler() },
+            "com.xt.retouch" to { XingtuHandler() },
         )
     }
 
