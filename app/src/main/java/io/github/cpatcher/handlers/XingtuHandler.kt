@@ -17,7 +17,7 @@ class XingtuHandler : IHook() {
 
     companion object {
         private const val TAG = "Xingtu"
-        private const val TABLE_VERSION = 2
+        private const val TABLE_VERSION = 3
         private const val TARGET_PACKAGE = "com.xt.retouch"
     }
 
@@ -31,7 +31,7 @@ class XingtuHandler : IHook() {
         applyGenericHooks()
         try {
             DebugLog.d(TAG, "开始 DexKit 指纹扫描...")
-            val obfsTable = createObfsTable("xingtu", TABLE_VERSION) { bridge -> buildObfsTable(bridge) }
+            val obfsTable = createObfsTable("xingtu", TABLE_VERSION, loadPackageParam.appInfo.sourceDir) { bridge -> buildObfsTable(bridge) }
             DebugLog.d(TAG, "指纹表构建成功，共 ${obfsTable.size} 条")
             toast("醒图: 指纹匹配成功 ${obfsTable.size} 条")
             applyPrecisionHooks(obfsTable)

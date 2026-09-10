@@ -18,7 +18,7 @@ class Cloud123Handler : IHook() {
 
     companion object {
         private const val TAG = "Cloud123"
-        private const val TABLE_VERSION = 2
+        private const val TABLE_VERSION = 3
         private const val TARGET_PACKAGE = "com.mfcloudcalculate.networkdisk"
     }
 
@@ -33,7 +33,7 @@ class Cloud123Handler : IHook() {
         applyGenericHooks()
         try {
             DebugLog.d(TAG, "开始 DexKit 指纹扫描...")
-            val obfsTable = createObfsTable("cloud123", TABLE_VERSION) { bridge -> buildObfsTable(bridge) }
+            val obfsTable = createObfsTable("cloud123", TABLE_VERSION, loadPackageParam.appInfo.sourceDir) { bridge -> buildObfsTable(bridge) }
             DebugLog.d(TAG, "指纹表构建成功，共 ${obfsTable.size} 条")
             toast("123云盘: 指纹匹配成功 ${obfsTable.size} 条")
             applyPrecisionHooks(obfsTable)
