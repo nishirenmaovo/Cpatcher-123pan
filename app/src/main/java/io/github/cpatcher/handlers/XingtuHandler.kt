@@ -28,20 +28,17 @@ class XingtuHandler : IHook() {
         if (loadPackageParam.packageName != TARGET_PACKAGE) return
         DebugLog.d(TAG, "===== 醒图模块启动 =====")
         toast("醒图: 模块启动")
-
         applyGenericHooks()
-
         try {
             DebugLog.d(TAG, "开始 DexKit 指纹扫描...")
             val obfsTable = createObfsTable("xingtu", TABLE_VERSION) { bridge -> buildObfsTable(bridge) }
             DebugLog.d(TAG, "指纹表构建成功，共 ${obfsTable.size} 条")
             toast("醒图: 指纹匹配成功 ${obfsTable.size} 条")
             applyPrecisionHooks(obfsTable)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             DebugLog.e(TAG, "DexKit 指纹失败: ${e.message}", e)
             toast("醒图: 指纹失败，使用通用模式")
         }
-
         DebugLog.d(TAG, "===== 模块初始化完成: 成功$hookSuccessCount 失败$hookFailCount =====")
         toast("醒图: 完成 成功$hookSuccessCount 失败$hookFailCount")
     }
@@ -52,15 +49,13 @@ class XingtuHandler : IHook() {
             val current = activityThreadClass.getMethod("currentActivityThread").invoke(null)
             val app = current.javaClass.getMethod("getApplication").invoke(current) as android.app.Application
             Toast.makeText(app, msg, Toast.LENGTH_LONG).show()
-        } catch (_: Exception) { }
+        } catch (_: Throwable) { }
     }
 
     private fun applyGenericHooks() {
         DebugLog.d(TAG, "--- 应用通用 Hook ---")
-
         val vipMethods = listOf("isVip", "isMember", "isSvip", "isPremium", "isPayUser", "hasVip", "getVip", "isVipUser", "isVipMember", "getMemberLevel", "getVipLevel", "isUserVip", "isUserMember", "isUserSvip", "isUserPremium")
         val packages = listOf("com.xt.retouch", "com.xt.retouch.user", "com.xt.retouch.mine", "com.xt.retouch.bean", "com.xt.retouch.model", "com.xt.retouch.vip", "com.xt.retouch.member", "com.xt.retouch.account", "com.xt.retouch.data", "com.xt.retouch.entity", "com.xt.retouch.info")
-
         var vipHookCount = 0
         packages.forEach { pkg ->
             vipMethods.forEach { methodName ->
@@ -75,13 +70,12 @@ class XingtuHandler : IHook() {
                         }
                         vipHookCount++
                         DebugLog.d(TAG, "  VIP方法 Hook成功: $className.$methodName()")
-                    } catch (_: Exception) { }
+                    } catch (_: Throwable) { }
                 }
             }
         }
         hookSuccessCount += vipHookCount
         DebugLog.d(TAG, "  通用VIP方法 Hook: $vipHookCount 个")
-
         try {
             findClass("android.app.Activity").hookAfter("onCreate", "android.os.Bundle") { param ->
                 val activity = param.thisObject as Activity
@@ -93,11 +87,7 @@ class XingtuHandler : IHook() {
             }
             hookSuccessCount++
             DebugLog.d(TAG, "  VIP/支付Activity拦截 Hook成功")
-        } catch (e: Exception) {
-            hookFailCount++
-            DebugLog.e(TAG, "  VIP/支付Activity拦截失败: ${e.message}")
-        }
-
+        } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  VIP/支付Activity拦截失败: ${e.message}") }
         val lockMethods = listOf("isLock", "isLocked", "isVipLock", "needVip", "isNeedVip", "isVipMaterial", "isVipFilter", "isLockMaterial", "isLockFilter")
         val materialPackages = listOf("com.xt.retouch", "com.xt.retouch.material", "com.xt.retouch.filter", "com.xt.retouch.bean", "com.xt.retouch.model", "com.xt.retouch.entity", "com.xt.retouch.data", "com.xt.retouch.item")
         var lockCount = 0
@@ -105,13 +95,12 @@ class XingtuHandler : IHook() {
             lockMethods.forEach { methodName ->
                 val classNames = listOf("$pkg.Material", "$pkg.Filter", "$pkg.MaterialBean", "$pkg.FilterBean", "$pkg.MaterialInfo", "$pkg.FilterInfo", "$pkg.Item", "$pkg.Resource")
                 classNames.forEach { className ->
-                    try { findClass(className).hookAfter(methodName) { param -> param.result = false }; lockCount++; DebugLog.d(TAG, "  素材锁定 Hook成功: $className.$methodName()") } catch (_: Exception) { }
+                    try { findClass(className).hookAfter(methodName) { param -> param.result = false }; lockCount++; DebugLog.d(TAG, "  素材锁定 Hook成功: $className.$methodName()") } catch (_: Throwable) { }
                 }
             }
         }
         hookSuccessCount += lockCount
         DebugLog.d(TAG, "  素材/滤镜锁定 Hook: $lockCount 个")
-
         val watermarkMethods = listOf("addWatermark", "showWatermark", "hasWatermark", "isWatermark", "needWatermark", "getWatermark", "watermark")
         val exportPackages = listOf("com.xt.retouch", "com.xt.retouch.export", "com.xt.retouch.save", "com.xt.retouch.editor", "com.xt.retouch.util", "com.xt.retouch.utils")
         var wmCount = 0
@@ -119,7 +108,7 @@ class XingtuHandler : IHook() {
             watermarkMethods.forEach { methodName ->
                 val classNames = listOf("$pkg.ExportHelper", "$pkg.SaveHelper", "$pkg.ImageUtil", "$pkg.ImageUtils", "$pkg.ExportUtil", "$pkg.SaveUtil", "$pkg.EditHelper", "$pkg.PhotoHelper")
                 classNames.forEach { className ->
-                    try { findClass(className).hookAfter(methodName) { param -> param.result = false }; wmCount++; DebugLog.d(TAG, "  水印 Hook成功: $className.$methodName()") } catch (_: Exception) { }
+                    try { findClass(className).hookAfter(methodName) { param -> param.result = false }; wmCount++; DebugLog.d(TAG, "  水印 Hook成功: $className.$methodName()") } catch (_: Throwable) { }
                 }
             }
         }
@@ -143,7 +132,7 @@ class XingtuHandler : IHook() {
                 findClass(mi.className).hookAfter(mi.memberName) { param -> param.result = true }
                 hookSuccessCount++
                 DebugLog.d(TAG, "  精确Hook isVip成功: ${mi.className}.${mi.memberName}")
-            } catch (e: Exception) { hookFailCount++; DebugLog.e(TAG, "  精确Hook isVip失败: ${e.message}") }
+            } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  精确Hook isVip失败: ${e.message}") }
         }
         obfsTable["vip_dialog"]?.let { info ->
             try {
@@ -151,7 +140,7 @@ class XingtuHandler : IHook() {
                 findClass(mi.className).hookBefore(mi.memberName) { param -> param.result = null }
                 hookSuccessCount++
                 DebugLog.d(TAG, "  精确Hook VIP弹窗成功: ${mi.className}.${mi.memberName}")
-            } catch (e: Exception) { hookFailCount++; DebugLog.e(TAG, "  精确Hook VIP弹窗失败: ${e.message}") }
+            } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  精确Hook VIP弹窗失败: ${e.message}") }
         }
     }
 }
