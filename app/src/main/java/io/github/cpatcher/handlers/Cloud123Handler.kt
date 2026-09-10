@@ -3,22 +3,17 @@ package io.github.cpatcher.handlers
 import android.app.Activity
 import android.view.View
 import android.widget.Toast
+import io.github.cpatcher.arch.ClassScanner
 import io.github.cpatcher.arch.DebugLog
 import io.github.cpatcher.arch.IHook
-import io.github.cpatcher.arch.ObfsMethodInfo
 import io.github.cpatcher.arch.hookAfter
 import io.github.cpatcher.arch.hookBefore
 import io.github.cpatcher.arch.findClass
-import io.github.cpatcher.arch.createObfsTable
-import io.github.cpatcher.arch.toObfsInfo
-import org.luckypray.dexkit.DexKitBridge
-import java.lang.reflect.Modifier
 
 class Cloud123Handler : IHook() {
 
     companion object {
         private const val TAG = "Cloud123"
-        private const val TABLE_VERSION = 3
         private const val TARGET_PACKAGE = "com.mfcloudcalculate.networkdisk"
     }
 
@@ -31,16 +26,7 @@ class Cloud123Handler : IHook() {
         DebugLog.d(TAG, "===== 123云盘模块启动 =====")
         toast("123云盘: 模块启动")
         applyGenericHooks()
-        try {
-            DebugLog.d(TAG, "开始 DexKit 指纹扫描...")
-            val obfsTable = createObfsTable("cloud123", TABLE_VERSION, loadPackageParam.appInfo.sourceDir) { bridge -> buildObfsTable(bridge) }
-            DebugLog.d(TAG, "指纹表构建成功，共 ${obfsTable.size} 条")
-            toast("123云盘: 指纹匹配成功 ${obfsTable.size} 条")
-            applyPrecisionHooks(obfsTable)
-        } catch (e: Throwable) {
-            DebugLog.e(TAG, "DexKit 指纹失败: ${e.message}", e)
-            toast("123云盘: 指纹失败，使用通用模式")
-        }
+        scanAndHookVipMethods()
         DebugLog.d(TAG, "===== 模块初始化完成: 成功$hookSuccessCount 失败$hookFailCount =====")
         toast("123云盘: 完成 成功$hookSuccessCount 失败$hookFailCount")
     }
@@ -56,21 +42,6 @@ class Cloud123Handler : IHook() {
 
     private fun applyGenericHooks() {
         DebugLog.d(TAG, "--- 应用通用 Hook ---")
-        val vipMethods = listOf("isVip", "isMember", "isSvip", "isPremium", "isPayUser", "hasVip", "getVip", "isVipUser")
-        val packages = listOf("com.mfcloudcalculate.networkdisk", "com.mfcloudcalculate.networkdisk.user", "com.mfcloudcalculate.networkdisk.mine", "com.mfcloudcalculate.networkdisk.bean", "com.mfcloudcalculate.networkdisk.model", "com.mfcloudcalculate.networkdisk.vip", "com.mfcloudcalculate.networkdisk.member", "com.mfcloudcalculate.networkdisk.account", "com.mfcloudcalculate.networkdisk.data")
-        var vipHookCount = 0
-        packages.forEach { pkg ->
-            vipMethods.forEach { methodName ->
-                try {
-                    val clazz = findClass("$pkg.UserInfo")
-                    clazz.hookAfter(methodName) { param -> param.result = true }
-                    vipHookCount++
-                    DebugLog.d(TAG, "  VIP方法 Hook成功: $pkg.UserInfo.$methodName()")
-                } catch (_: Throwable) { }
-            }
-        }
-        hookSuccessCount += vipHookCount
-        DebugLog.d(TAG, "  通用VIP方法 Hook: $vipHookCount 个")
         try {
             findClass("android.app.Activity").hookAfter("onCreate", "android.os.Bundle") { param ->
                 val activity = param.thisObject as Activity
@@ -103,31 +74,31 @@ class Cloud123Handler : IHook() {
         } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  广告View隐藏失败: ${e.message}") }
     }
 
-    private fun buildObfsTable(bridge: DexKitBridge): Map<String, Any> {
-        val table = mutableMapOf<String, Any>()
-        val isVipMethod = bridge.findMethod { matcher { usingStrings("isVip", "isMember", "isSvip", "vip"); returnType = "boolean"; modifiers = Modifier.PUBLIC } }.firstOrNull()
-        if (isVipMethod != null) { table["is_vip"] = isVipMethod.toObfsInfo(); DebugLog.d(TAG, "  指纹命中 isVip: ${isVipMethod.className}.${isVipMethod.methodName}") }
-        val vipDialogMethod = bridge.findMethod { matcher { usingStrings("vip_dialog", "member_pay", "open_vip", "upgrade", "vip_pay"); returnType = "void" } }.firstOrNull()
-        if (vipDialogMethod != null) { table["vip_dialog"] = vipDialogMethod.toObfsInfo(); DebugLog.d(TAG, "  指纹命中 VIP弹窗: ${vipDialogMethod.className}.${vipDialogMethod.methodName}") }
-        return table
-    }
-
-    private fun applyPrecisionHooks(obfsTable: Map<String, Any>) {
-        obfsTable["is_vip"]?.let { info ->
-            try {
-                val mi = info as ObfsMethodInfo
-                findClass(mi.className).hookAfter(mi.memberName) { param -> param.result = true }
-                hookSuccessCount++
-                DebugLog.d(TAG, "  精确Hook isVip成功: ${mi.className}.${mi.memberName}")
-            } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  精确Hook isVip失败: ${e.message}") }
-        }
-        obfsTable["vip_dialog"]?.let { info ->
-            try {
-                val mi = info as ObfsMethodInfo
-                findClass(mi.className).hookBefore(mi.memberName) { param -> param.result = null }
-                hookSuccessCount++
-                DebugLog.d(TAG, "  精确Hook VIP弹窗成功: ${mi.className}.${mi.memberName}")
-            } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  精确Hook VIP弹窗失败: ${e.message}") }
-        }
+    private fun scanAndHookVipMethods() {
+        DebugLog.d(TAG, "--- 扫描 VIP 方法 ---")
+        try {
+            val apkPath = loadPackageParam.appInfo.sourceDir
+            val vipMethodNames = setOf("isVip", "isMember", "isSvip", "isPremium", "isPayUser", "hasVip", "isVipUser", "isVipMember", "isUserVip", "isUserMember", "isUserSvip", "isUserPremium")
+            val booleanMethods = ClassScanner.findMethods(apkPath = apkPath, classLoader = loadPackageParam.classLoader, packagePrefix = "com.mfcloudcalculate", methodNames = vipMethodNames, returnType = "boolean", paramCount = 0)
+            var count = 0
+            booleanMethods.forEach { info ->
+                try {
+                    findClass(info.className).hookAfter(info.methodName) { param -> param.result = true }
+                    count++; hookSuccessCount++
+                    DebugLog.d(TAG, "  VIP方法 Hook成功: ${info.className}.${info.methodName}() = true")
+                } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  VIP方法 Hook失败: ${info.className}.${info.methodName} - ${e.message}") }
+            }
+            val levelMethodNames = setOf("getVipLevel", "getMemberLevel", "getVipType", "getMemberType")
+            val levelMethods = ClassScanner.findMethods(apkPath = apkPath, classLoader = loadPackageParam.classLoader, packagePrefix = "com.mfcloudcalculate", methodNames = levelMethodNames, returnType = "int", paramCount = 0)
+            levelMethods.forEach { info ->
+                try {
+                    findClass(info.className).hookAfter(info.methodName) { param -> param.result = 2 }
+                    count++; hookSuccessCount++
+                    DebugLog.d(TAG, "  VIP等级 Hook成功: ${info.className}.${info.methodName}() = 2")
+                } catch (e: Throwable) { hookFailCount++; DebugLog.e(TAG, "  VIP等级 Hook失败: ${info.className}.${info.methodName} - ${e.message}") }
+            }
+            DebugLog.d(TAG, "  扫描VIP方法完成: 共 Hook $count 个")
+            toast("123云盘: 扫描到VIP方法 $count 个")
+        } catch (e: Throwable) { DebugLog.e(TAG, "  扫描VIP方法异常: ${e.message}", e) }
     }
 }
